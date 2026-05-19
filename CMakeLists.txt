@@ -4,6 +4,16 @@ project(TikhoretskDB)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Поддержка nlohmann/json (header-only)
+if(NOT NLOHMANN_JSON_INCLUDE_DIR)
+    find_path(NLOHMANN_INCLUDE_DIR nlohmann/json.hpp)
+    if(NLOHMANN_INCLUDE_DIR)
+        set(NLOHMANN_JSON_INCLUDE_DIR ${NLOHMANN_INCLUDE_DIR})
+    else()
+        message(FATAL_ERROR "nlohmann/json.hpp not found. Pass -DNLOHMANN_JSON_INCLUDE_DIR=/path/to/libs")
+    endif()
+endif()
+
 # ========================
 # Статическая библиотека (ядро + API)
 # ========================
@@ -26,6 +36,8 @@ add_library(db_lib STATIC
 
 # Говорим, где искать заголовочные файлы
 target_include_directories(db_lib PUBLIC src)
+
+target_include_directories(db_lib PRIVATE ${NLOHMANN_JSON_INCLUDE_DIR})
 
 # ========================
 # Консольный интерфейс (твой фронтенд)

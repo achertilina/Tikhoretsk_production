@@ -1,66 +1,77 @@
-#include "client/database.h"
-#include "client/result.h"
+#include "database.h"
+#include "../core/catalog.h"
+#include "../sql/parser.h"
+#include "../sql/executor.h"
+#include "../sql/result.h"
 
-namespace db {
+struct Database::Impl {
+    std::unique_ptr<Catalog> catalog;
+    std::unique_ptr<Parser> parser;
+    std::unique_ptr<Executor> executor;
+    std::string current_db;
+};
 
-Database::Database() : catalog_(std::make_unique<Catalog>()) {}
-
-Database::~Database() {
-    close();
+Database::Database() : pImpl(std::make_unique<Impl>()) {
+    pImpl->parser = std::make_unique<Parser>();
 }
 
-void Database::open(const std::string& root_path) {
-    // Временная заглушка
-    (void)root_path;  // подавляем warning о неиспользуемом параметре
-    if (catalog_) {
-        catalog_->load_all();
+Database::~Database() = default;
+
+bool Database::open(const std::string& root_path) {
+    try {
+        pImpl->catalog = std::make_unique<Catalog>(root_path);
+        pImpl->catalog->loadAll();
+        pImpl->executor = std::make_unique<Executor>(pImpl->catalog.get());
+
+        // Если уже есть хотя бы одна база, делаем её текущей
+        auto dbs = pImpl->catalog->listDatabases();
+        if (!dbs.empty()) {
+            pImpl->current_db = dbs[0];
+            pImpl->executor->setCurrentDatabase(pImpl->current_db);
+        }
+        return true;
+    } catch (const std::exception&) {
+        return false;
     }
 }
 
 void Database::close() {
-    if (catalog_) {
-        catalog_->save_all();
+    if (pImpl->catalog) {
+        pImpl->catalog->saveAll();
     }
 }
 
-Result Database::execute(const std::string& sql) {
-    // Временная заглушка для демо
-    
-    // SELECT
-    if (sql.find("SELECT") == 0 || sql.find("select") == 0) {
-        return Result::success_table(
-            {"id", "name", "age"},
-            {{"1", "Alice", "25"}, {"2", "Bob", "30"}, {"3", "Charlie", "35"}}
-        );
+bool Database::useDatabase(const std::string& db_name) {
+    if (!pImpl->catalog) return false;
+    auto dbs = pImpl->catalog->listDatabases();
+    for (const auto& db : dbs) {
+        if (db == db_name) {
+            pImpl->current_db = db_name;
+            if (pImpl->executor) {
+                pImpl->executor->setCurrentDatabase(db_name);
+            }
+            return true;
+        }
     }
-    
-    // INSERT
-    if (sql.find("INSERT") == 0 || sql.find("insert") == 0) {
-        return Result::success_affected(1);
-    }
-    
-    // UPDATE
-    if (sql.find("UPDATE") == 0 || sql.find("update") == 0) {
-        return Result::success_affected(1);
-    }
-    
-    // DELETE
-    if (sql.find("DELETE") == 0 || sql.find("delete") == 0) {
-        return Result::success_affected(1);
-    }
-    
-    // CREATE
-    if (sql.find("CREATE") == 0 || sql.find("create") == 0) {
-        return Result::success_affected(0);
-    }
-    
-    // DROP
-    if (sql.find("DROP") == 0 || sql.find("drop") == 0) {
-        return Result::success_affected(0);
-    }
-    
-    // Ошибка для непонятных запросов
-    return Result::error("Unknown or unsupported query");
+    return false;
 }
 
-} // namespace db
+std::vector<std::string> Database::listDatabases() const {
+    if (!pImpl->catalog) return {};
+    return pImpl->catalog->listDatabases();
+}
+
+ClientResult Database::execute(const std::string& sql) {
+    try {
+        auto stmt = pImpl->parser->parse(sql);
+        if (!pImpl->executor) {
+            pImpl->executor = std::make_unique<Executor>(pImpl->catalog.get());
+        }
+        // Важно: перед выполнением обновляем текущую БД в executor
+        pImpl->executor->setCurrentDatabase(pImpl->current_db);
+        auto internalResult = pImpl->executor->execute(*stmt);
+        return ClientResult(internalResult);
+    } catch (const std::exception& e) {
+        return ClientResult::makeError(e.what());
+    }
+}
