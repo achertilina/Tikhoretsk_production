@@ -48,3 +48,9 @@ compile_commands.json
 *.pdf
 *.zip
 *.tar.gz
+
+# Дополнительные правила для сборки
+build/
+data/
+*.o
+*.exe
