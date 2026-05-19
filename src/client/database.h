@@ -1,30 +1,26 @@
 #pragma once
 
-#include <string>
+#include "result.h"
 #include <memory>
-
-namespace db {
-
-// Временная заглушка для Catalog
-class Catalog {
-public:
-    void load_all() {}
-    void save_all() {}
-};
-
-class Result;
+#include <string>
+#include <vector>
 
 class Database {
 public:
     Database();
     ~Database();
-    
-    void open(const std::string& root_path);
-    void close();
-    Result execute(const std::string& sql);
-    
-private:
-    std::unique_ptr<Catalog> catalog_;
-};
 
-} // namespace db
+    bool open(const std::string& root_path);
+    ClientResult execute(const std::string& sql);
+    void close();
+
+    // Переключение на указанную базу данных
+    bool useDatabase(const std::string& db_name);
+
+    // Получение списка всех баз данных
+    std::vector<std::string> listDatabases() const;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> pImpl;
+};
