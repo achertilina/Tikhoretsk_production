@@ -5,6 +5,8 @@
 #include <vector>
 #include <string>
 
+#include <unordered_map>
+
 // Forward declarations
 struct Condition;
 struct Statement;

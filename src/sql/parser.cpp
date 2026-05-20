@@ -12,6 +12,7 @@ enum TokenType {
     TOK_NUMBER,
     TOK_OPERATOR,
     TOK_PUNCTUATION,
+    TOK_STAR,     
     TOK_EOF
 };
 
@@ -84,6 +85,11 @@ public:
             pos++; col++;
             return {TOK_PUNCTUATION, punc, line, col};
         }
+        // Star (SELECT *)
+        if (c == '*') {
+            pos++; col++;
+            return {TOK_STAR, "*", line, col};
+        }
         // Identifiers and keywords
         if (std::isalpha(c) || c == '_') {
             std::string ident;
@@ -149,8 +155,9 @@ private:
         auto q = std::make_unique<SelectQuery>();
         advance(); // SELECT
         // projection
-        if (curr.type == TOK_KEYWORD && curr.value == "*") {
-            advance();
+        if (curr.type == TOK_STAR) {
+            advance(); // пропускаем *
+            // q->columns остаётся пустым – это означает SELECT *
         } else {
             do {
                 if (curr.type != TOK_IDENT) throw std::runtime_error("Expected column name");
