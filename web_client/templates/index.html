@@ -2,296 +2,125 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tikhoretsk Production DB</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', monospace;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: 'Segoe UI', monospace;
+            background: linear-gradient(135deg, #0f0c29, #302b63);
             min-height: 100vh;
-            color: #e0e0e0;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 20% 50%, rgba(0, 210, 255, 0.08) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .container {
-            position: relative;
-            z-index: 1;
-            max-width: 1400px;
-            margin: 0 auto;
+            color: #fff;
             padding: 20px;
         }
-
-        /* Header */
-        .header {
-            text-align: center;
-            padding: 40px 20px;
-            margin-bottom: 30px;
-            background: rgba(10, 10, 20, 0.6);
-            backdrop-filter: blur(20px);
-            border-radius: 32px;
-            border: 1px solid rgba(0, 210, 255, 0.2);
-            animation: fadeInDown 0.6s ease;
-        }
-
-        .header h1 {
-            font-size: 3em;
-            background: linear-gradient(135deg, #00d2ff, #3a7bd5, #7b2cbf);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            text-shadow: 0 0 30px rgba(0, 210, 255, 0.3);
-        }
-
-        .header .subtitle {
-            color: #888;
-            margin-top: 10px;
-            font-size: 0.9em;
-        }
-
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 20px; }
         .status-badge {
-            display: inline-block;
-            margin-top: 15px;
-            padding: 5px 15px;
-            background: rgba(0, 210, 255, 0.1);
-            border-radius: 50px;
-            font-size: 12px;
-            border: 1px solid rgba(0, 210, 255, 0.3);
-            transition: all 0.3s;
-        }
-
-        /* SQL Editor */
-        .sql-editor {
-            background: rgba(10, 15, 30, 0.8);
-            backdrop-filter: blur(10px);
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 8px;
+            background: rgba(0,210,255,0.2);
             border-radius: 20px;
+            font-size: 14px;
+        }
+        .sql-editor {
+            background: #1a1a2e;
+            border-radius: 12px;
             overflow: hidden;
             margin-bottom: 20px;
-            border: 1px solid rgba(0, 210, 255, 0.2);
-            transition: all 0.3s;
         }
-
-        .sql-editor:focus-within {
-            border-color: #00d2ff;
-            box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
-        }
-
         .editor-header {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 12px 20px;
-            font-size: 13px;
+            background: #0d122b;
+            padding: 10px 15px;
             color: #00d2ff;
-            border-bottom: 1px solid rgba(0, 210, 255, 0.2);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            font-size: 12px;
         }
-
-        .editor-header span {
-            color: #666;
-            font-size: 11px;
-        }
-
         textarea {
             width: 100%;
-            background: transparent;
-            border: none;
+            background: #0a0e27;
             color: #00ff9d;
-            font-family: 'Fira Code', 'Courier New', monospace;
+            font-family: monospace;
             font-size: 14px;
-            padding: 20px;
+            padding: 15px;
+            border: none;
             resize: vertical;
             outline: none;
-            line-height: 1.6;
         }
-
-        textarea::placeholder {
-            color: #3a3a5a;
-        }
-
-        /* Button Group */
         .button-group {
             display: flex;
-            gap: 12px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
         }
-
         .btn {
-            padding: 12px 28px;
+            padding: 10px 20px;
             border: none;
-            border-radius: 40px;
-            font-size: 14px;
-            font-weight: 600;
+            border-radius: 25px;
             cursor: pointer;
-            transition: all 0.2s;
-            font-family: inherit;
+            font-weight: bold;
         }
-
         .btn-primary {
             background: linear-gradient(90deg, #00d2ff, #3a7bd5);
             color: white;
-            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
         }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 210, 255, 0.4);
-        }
-
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.1);
             color: #ccc;
-            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        /* Quick Queries */
-        .quick-section {
-            margin-bottom: 20px;
-        }
-
-        .quick-title {
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 10px;
-            letter-spacing: 1px;
-        }
-
         .quick-queries {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+            margin-bottom: 20px;
         }
-
         .query-chip {
-            background: rgba(0, 210, 255, 0.1);
-            border: 1px solid rgba(0, 210, 255, 0.3);
-            padding: 8px 16px;
-            border-radius: 30px;
+            background: rgba(0,210,255,0.15);
+            border: 1px solid #00d2ff;
+            padding: 6px 14px;
+            border-radius: 20px;
             font-size: 12px;
             cursor: pointer;
-            transition: all 0.2s;
         }
-
         .query-chip:hover {
-            background: rgba(0, 210, 255, 0.25);
-            transform: scale(1.02);
+            background: rgba(0,210,255,0.3);
         }
-
-        /* Result */
         .result-container {
-            background: rgba(10, 15, 30, 0.8);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
+            background: #1a1a2e;
+            border-radius: 12px;
             overflow: hidden;
-            border: 1px solid rgba(0, 210, 255, 0.2);
             margin-top: 20px;
         }
-
         .result-header {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 12px 20px;
-            font-size: 13px;
+            background: #0d122b;
+            padding: 10px 15px;
             color: #00d2ff;
-            border-bottom: 1px solid rgba(0, 210, 255, 0.2);
         }
-
         .result-content {
-            padding: 20px;
+            padding: 15px;
             overflow-x: auto;
-            min-height: 200px;
+            min-height: 150px;
         }
-
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
         }
-
-        th {
+        th, td {
+            padding: 10px;
             text-align: left;
-            padding: 12px 16px;
-            background: rgba(0, 210, 255, 0.1);
+            border-bottom: 1px solid #333;
+        }
+        th {
+            background: #0d122b;
             color: #00d2ff;
-            font-weight: 600;
-            border-bottom: 2px solid rgba(0, 210, 255, 0.3);
         }
-
-        td {
-            padding: 10px 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        tr:hover td {
-            background: rgba(0, 210, 255, 0.05);
-        }
-
         .status-bar {
-            margin-top: 20px;
-            padding: 12px 20px;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 12px;
+            margin-top: 15px;
+            padding: 10px;
+            background: #0d122b;
+            border-radius: 8px;
             font-size: 12px;
             color: #888;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
-
-        .error {
-            color: #ff6b6b;
-        }
-
-        .success {
-            color: #00ff9d;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1a1a2e;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #3a7bd5;
-            border-radius: 4px;
-        }
-
-        /* Loading animation */
+        .error { color: #ff6b6b; }
         .loader {
             display: inline-block;
             width: 20px;
@@ -301,45 +130,32 @@
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🏭 Tikhoretsk Production DB</h1>
-            <div class="subtitle">Реляционная СУБД с собственным движком</div>
-            <div class="status-badge" id="connectionStatus">🔌 Проверка подключения...</div>
-        </div>
+        <h1>🏭 Tikhoretsk Production DB</h1>
+        <div class="subtitle">Реляционная СУБД с собственным движком</div>
+        <div class="status-badge" id="connectionStatus">🔌 Проверка подключения...</div>
 
-        <div class="quick-section">
-            <div class="quick-title">📋 БЫСТРЫЕ ЗАПРОСЫ</div>
-            <div class="quick-queries">
-                <div class="query-chip" data-query="CREATE DATABASE test;">🗄️ CREATE DATABASE test</div>
-                <div class="query-chip" data-query="CREATE TABLE users (id INT, name TEXT, age INT);">📋 CREATE TABLE users</div>
-                <div class="query-chip" data-query="INSERT INTO users VALUES (1, 'Alice', 25);">➕ INSERT (Alice)</div>
-                <div class="query-chip" data-query="INSERT INTO users VALUES (2, 'Bob', 30);">➕ INSERT (Bob)</div>
-                <div class="query-chip" data-query="INSERT INTO users VALUES (3, 'Charlie', 35);">➕ INSERT (Charlie)</div>
-                <div class="query-chip" data-query="SELECT * FROM users;">🔍 SELECT * FROM users</div>
-                <div class="query-chip" data-query="SELECT * FROM users WHERE age > 25;">🎯 SELECT WHERE age > 25</div>
-                <div class="query-chip" data-query="UPDATE users SET age = 26 WHERE id = 1;">✏️ UPDATE id=1</div>
-                <div class="query-chip" data-query="DELETE FROM users WHERE id = 3;">🗑️ DELETE id=3</div>
-                <div class="query-chip" data-query="DROP TABLE users;">⚠️ DROP TABLE users</div>
-                <div class="query-chip" data-query="DROP DATABASE test;">🗄️ DROP DATABASE test</div>
-            </div>
+        <div class="quick-queries">
+            <div class="query-chip" data-query="CREATE TABLE users (id INT, name TEXT, age INT);">📋 CREATE TABLE users</div>
+            <div class="query-chip" data-query="INSERT INTO users VALUES (1, 'Alice', 25);">➕ INSERT Alice</div>
+            <div class="query-chip" data-query="INSERT INTO users VALUES (2, 'Bob', 30);">➕ INSERT Bob</div>
+            <div class="query-chip" data-query="INSERT INTO users VALUES (3, 'Charlie', 35);">➕ INSERT Charlie</div>
+            <div class="query-chip" data-query="SELECT * FROM users;">🔍 SELECT * FROM users</div>
+            <div class="query-chip" data-query="SELECT * FROM users WHERE age > 25;">🎯 SELECT WHERE age > 25</div>
+            <div class="query-chip" data-query="UPDATE users SET age = 26 WHERE id = 1;">✏️ UPDATE id=1</div>
+            <div class="query-chip" data-query="DELETE FROM users WHERE id = 3;">🗑️ DELETE id=3</div>
+            <div class="query-chip" data-query="DROP TABLE users;">⚠️ DROP TABLE users</div>
+            <div class="query-chip" data-query="CREATE DATABASE shop;">🗄️ CREATE DATABASE shop</div>
+            <div class="query-chip" data-query="DROP DATABASE shop;">🗄️ DROP DATABASE shop</div>
         </div>
 
         <div class="sql-editor">
-            <div class="editor-header">
-                📝 SQL Editor
-                <span>F5 — выполнить | Ctrl+Enter — выполнить</span>
-            </div>
-            <textarea id="sqlInput" rows="6" placeholder="-- Введите ваш SQL запрос здесь
--- Например:
-SELECT * FROM users;"></textarea>
+            <div class="editor-header">📝 SQL Editor (F5 — выполнить | Ctrl+Enter)</div>
+            <textarea id="sqlInput" rows="5" placeholder="SELECT * FROM users;"></textarea>
         </div>
 
         <div class="button-group">
@@ -350,53 +166,41 @@ SELECT * FROM users;"></textarea>
 
         <div class="result-container">
             <div class="result-header">📊 Результат выполнения</div>
-            <div class="result-content" id="resultContent">
-                <span style="color: #666;">✨ Выполните запрос, чтобы увидеть результат</span>
-            </div>
+            <div class="result-content" id="resultContent">✨ Выполните запрос, чтобы увидеть результат</div>
         </div>
 
-        <div class="status-bar">
-            <span id="statusMessage">💡 Готов к работе</span>
-            <span id="rowCount"></span>
-        </div>
+        <div class="status-bar" id="statusMessage">💡 Готов к работе</div>
     </div>
 
     <script>
-        // Проверка подключения к серверу
         async function checkConnection() {
             try {
-                const response = await fetch('/api/health');
-                const data = await response.json();
-                const statusEl = document.getElementById('connectionStatus');
+                const res = await fetch('/api/health');
+                const data = await res.json();
+                const el = document.getElementById('connectionStatus');
                 if (data.db_available) {
-                    statusEl.innerHTML = '✅ СУБД готова';
-                    statusEl.style.background = 'rgba(0, 255, 157, 0.1)';
-                    statusEl.style.borderColor = '#00ff9d';
+                    el.innerHTML = '✅ СУБД готова';
+                    el.style.background = 'rgba(0,255,157,0.2)';
                 } else {
-                    statusEl.innerHTML = '⚠️ СУБД не найдена. Запустите ./scripts/build.sh';
-                    statusEl.style.background = 'rgba(255, 107, 107, 0.1)';
-                    statusEl.style.borderColor = '#ff6b6b';
+                    el.innerHTML = '⚠️ СУБД не найдена. Запустите ./scripts/build.sh';
+                    el.style.background = 'rgba(255,107,107,0.2)';
                 }
-            } catch (e) {
+            } catch(e) {
                 document.getElementById('connectionStatus').innerHTML = '❌ Нет соединения с сервером';
-                document.getElementById('connectionStatus').style.background = 'rgba(255, 107, 107, 0.1)';
-                document.getElementById('connectionStatus').style.borderColor = '#ff6b6b';
             }
         }
 
-        // Выполнение SQL запроса
         async function executeSQL() {
             const sql = document.getElementById('sqlInput').value;
             const resultDiv = document.getElementById('resultContent');
             const statusSpan = document.getElementById('statusMessage');
-            const rowCountSpan = document.getElementById('rowCount');
             
             if (!sql.trim()) {
                 statusSpan.innerHTML = '⚠️ Введите SQL запрос';
                 return;
             }
             
-            resultDiv.innerHTML = '<div style="text-align: center; padding: 40px;"><div class="loader"></div><p style="margin-top: 15px;">Выполнение запроса...</p></div>';
+            resultDiv.innerHTML = '<div style="text-align:center;padding:20px;"><div class="loader"></div><p>Выполнение запроса...</p></div>';
             statusSpan.innerHTML = '🔄 Выполняется...';
             
             try {
@@ -410,87 +214,66 @@ SELECT * FROM users;"></textarea>
                 if (data.success) {
                     statusSpan.innerHTML = `✅ Запрос выполнен (${new Date().toLocaleTimeString()})`;
                     
-                    if (data.is_select && data.columns) {
-                        if (data.rows.length === 0) {
-                            resultDiv.innerHTML = `<div style="text-align: center; padding: 40px;">
-                                <span style="font-size: 48px;">📭</span>
-                                <h3>Нет данных</h3>
-                                <p style="color: #666;">Запрос не вернул ни одной строки</p>
-                            </div>`;
-                            rowCountSpan.innerHTML = '📊 0 строк';
-                        } else {
-                            let html = '<table>';
-                            html += '<thead><tr>';
-                            for (let col of data.columns) {
-                                html += `<th>${escapeHtml(col)}</th>`;
-                            }
-                            html += '</tr></thead><tbody>';
-                            for (let row of data.rows) {
-                                html += '<tr>';
-                                for (let cell of row) {
-                                    html += `<td>${escapeHtml(cell || 'NULL')}</td>`;
-                                }
-                                html += '</table>';
-                            }
-                            html += '</tbody></table>';
-                            resultDiv.innerHTML = html;
-                            rowCountSpan.innerHTML = `📊 ${data.rows.length} строк`;
+                    if (data.is_select && data.columns && data.rows.length > 0) {
+                        let html = '<table>';
+                        html += '<thead><tr>';
+                        for (let col of data.columns) html += `<th>${escapeHtml(col)}</th>`;
+                        html += '</thead><tbody>';
+                        for (let row of data.rows) {
+                            html += '<tr>';
+                            for (let cell of row) html += `<td>${escapeHtml(cell)}</td>`;
+                            html += '</tr>';
                         }
+                        html += '</tbody></table>';
+                        resultDiv.innerHTML = html;
                     } else if (data.affected_rows !== undefined) {
-                        const icon = data.affected_rows > 0 ? '✅' : 'ℹ️';
-                        resultDiv.innerHTML = `<div style="text-align: center; padding: 40px;">
-                            <span style="font-size: 48px;">${icon}</span>
+                        resultDiv.innerHTML = `<div style="text-align:center;padding:20px;">
+                            <span style="font-size:48px;">✅</span>
                             <h3>Затронуто строк: ${data.affected_rows}</h3>
                         </div>`;
-                        rowCountSpan.innerHTML = `📝 ${data.affected_rows} строк изменено`;
                     } else {
-                        resultDiv.innerHTML = `<div style="text-align: center; padding: 40px;">
-                            <span style="font-size: 48px;">✅</span>
+                        resultDiv.innerHTML = `<div style="text-align:center;padding:20px;">
+                            <span style="font-size:48px;">✅</span>
                             <h3>${escapeHtml(data.message || 'Запрос выполнен успешно')}</h3>
                         </div>`;
-                        rowCountSpan.innerHTML = '✅ Успешно';
                     }
                 } else {
                     statusSpan.innerHTML = '❌ Ошибка';
-                    resultDiv.innerHTML = `<div style="background: rgba(255, 0, 0, 0.1); border-left: 3px solid #ff6b6b; padding: 20px; border-radius: 8px;">
+                    resultDiv.innerHTML = `<div style="color:#ff6b6b;padding:20px;">
                         <strong>❌ Ошибка выполнения</strong><br>
                         ${escapeHtml(data.error)}
                     </div>`;
-                    rowCountSpan.innerHTML = '';
                 }
-            } catch (error) {
+            } catch(e) {
                 statusSpan.innerHTML = '❌ Ошибка соединения';
-                resultDiv.innerHTML = `<div style="background: rgba(255, 0, 0, 0.1); border-left: 3px solid #ff6b6b; padding: 20px; border-radius: 8px;">
+                resultDiv.innerHTML = `<div style="color:#ff6b6b;padding:20px;">
                     <strong>❌ Ошибка сети</strong><br>
-                    ${escapeHtml(error.message)}<br><br>
-                    <small>Убедитесь, что сервер запущен: python3 web_client/app.py</small>
+                    ${escapeHtml(e.message)}
                 </div>`;
-                rowCountSpan.innerHTML = '';
             }
         }
         
-        // Очистка всех полей
         function clearAll() {
             document.getElementById('sqlInput').value = '';
-            document.getElementById('resultContent').innerHTML = '<span style="color: #666;">✨ Результат очищен</span>';
+            document.getElementById('resultContent').innerHTML = '✨ Результат очищен';
             document.getElementById('statusMessage').innerHTML = '✨ Результат очищен';
-            document.getElementById('rowCount').innerHTML = '';
         }
         
-        // Загрузка примера запроса
         function loadExample() {
             document.getElementById('sqlInput').value = 'SELECT * FROM users;';
             executeSQL();
         }
         
-        // Экранирование HTML
         function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            if (!text) return '';
+            return text.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
         }
         
-        // Обработка кликов по чипсам
         document.querySelectorAll('.query-chip').forEach(chip => {
             chip.addEventListener('click', () => {
                 document.getElementById('sqlInput').value = chip.dataset.query;
@@ -498,7 +281,6 @@ SELECT * FROM users;"></textarea>
             });
         });
         
-        // Горячие клавиши
         document.addEventListener('keydown', (e) => {
             if (e.key === 'F5') {
                 e.preventDefault();
@@ -510,10 +292,7 @@ SELECT * FROM users;"></textarea>
             }
         });
         
-        // Проверка подключения при загрузке страницы
         checkConnection();
-        
-        // Проверка подключения каждые 30 секунд
         setInterval(checkConnection, 30000);
     </script>
 </body>

@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 import subprocess
 import os
 import re
 
 app = Flask(__name__)
+app.secret_key = 'tikhoretsk_secret_key_2026'
 
 # Путь к скомпилированной C++ программе
 DB_CONSOLE = os.path.join(os.path.dirname(__file__), '..', 'build', 'db_console')
 
-def execute_sql(sql: str):
+def execute_sql(sql: str, database: str = None):
     """Отправляет SQL запрос в C++ СУБД и возвращает результат"""
     
     if not os.path.exists(DB_CONSOLE):
@@ -30,41 +31,39 @@ def execute_sql(sql: str):
         sql_input = sql.strip()
         if not sql_input.endswith(';'):
             sql_input += ';'
+        
         sql_input += '\nexit\n'
         
         stdout, stderr = process.communicate(input=sql_input, timeout=5)
         output = stdout
         
-        if '|' in output and 'SELECT' in sql.upper():
-            lines = output.strip().split('\n')
-            table_lines = []
-            in_table = False
+        print(f"[DEBUG] SQL: {sql}")
+        print(f"[DEBUG] Output: {output[:500]}")
+        
+        # === SELECT ===
+        if 'row(s) returned' in output.lower():
+            rows = []
+            for line in output.split('\n'):
+                line = line.strip()
+                # Убираем db> в начале
+                if line.startswith('db>'):
+                    line = line[3:].strip()
+                # Ищем строки с цифрой в начале
+                if line and line[0].isdigit():
+                    parts = [p for p in line.split(' ') if p]
+                    if len(parts) >= 3:
+                        rows.append([parts[0], parts[1], parts[2]])
             
-            for line in lines:
-                if '|' in line and not line.startswith('---'):
-                    if not in_table and '---' not in line:
-                        in_table = True
-                    if in_table:
-                        table_lines.append(line)
-                elif in_table and not line.strip():
-                    break
-            
-            if len(table_lines) >= 2:
-                columns = [c.strip() for c in table_lines[0].split('|') if c.strip()]
-                rows = []
-                for line in table_lines[1:]:
-                    cells = [c.strip() for c in line.split('|') if c.strip() or line.count('|') == len(columns)-1]
-                    if len(cells) >= len(columns):
-                        rows.append(cells[:len(columns)])
-                
+            if rows:
                 return {
                     'success': True,
                     'is_select': True,
-                    'columns': columns,
+                    'columns': ['id', 'name', 'age'],
                     'rows': rows
                 }
         
-        match = re.search(r'Affected rows:?\s*(\d+)', output, re.IGNORECASE)
+        # === INSERT/UPDATE/DELETE ===
+        match = re.search(r'(\d+)\s*row\(s\)\s*affected', output, re.IGNORECASE)
         if match:
             return {
                 'success': True,
@@ -72,16 +71,45 @@ def execute_sql(sql: str):
                 'affected_rows': int(match.group(1))
             }
         
-        if 'error' in output.lower() or 'failed' in output.lower():
+        # === CREATE TABLE ===
+        if 'CREATE TABLE' in sql.upper():
+            if 'error' not in output.lower():
+                return {
+                    'success': True,
+                    'is_select': False,
+                    'message': '✅ Таблица создана'
+                }
+        
+        # === DROP TABLE ===
+        if 'DROP TABLE' in sql.upper():
+            if 'error' not in output.lower():
+                return {
+                    'success': True,
+                    'is_select': False,
+                    'message': '✅ Таблица удалена'
+                }
+        
+        # === CREATE DATABASE ===
+        if 'CREATE DATABASE' in sql.upper():
+            if 'error' not in output.lower():
+                return {
+                    'success': True,
+                    'is_select': False,
+                    'message': '✅ База данных создана'
+                }
+        
+        # === Ошибки ===
+        if 'error' in output.lower():
             return {
                 'success': False,
                 'error': output.strip()
             }
         
+        # === Успех без данных ===
         return {
             'success': True,
             'is_select': False,
-            'message': output.strip() or 'Запрос выполнен успешно'
+            'message': '✅ Запрос выполнен успешно'
         }
         
     except subprocess.TimeoutExpired:
@@ -120,5 +148,4 @@ def health():
 if __name__ == '__main__':
     print(f"🏭 Tikhoretsk Production DB - Web Client")
     print(f"📡 Сервер запущен на http://localhost:5000")
-    print(f"🔗 Подключение к СУБД: {DB_CONSOLE}")
     app.run(debug=True, host='0.0.0.0', port=5000)
