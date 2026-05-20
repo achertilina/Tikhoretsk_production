@@ -38,7 +38,6 @@ bool Executor::evaluateCondition(const Condition* cond, const Table& table, size
         case ConditionType::COMPARISON: {
             auto cmp = static_cast<const ComparisonCondition*>(cond);
             const auto& row = table.rows()[row_idx];
-            // найти индекс колонки по имени
             size_t col_idx = 0;
             const auto& col_names = table.columnNames();
             for (; col_idx < col_names.size(); ++col_idx) {
@@ -58,7 +57,6 @@ bool Executor::evaluateCondition(const Condition* cond, const Table& table, size
             if (cmp->op == ">=") return col_val >= lit_val;
             throw std::runtime_error("Unknown comparison operator: " + cmp->op);
         }
-
         case ConditionType::LOGICAL_AND: {
             auto logic = static_cast<const LogicalCondition*>(cond);
             for (const auto& op : logic->operands)
@@ -66,7 +64,6 @@ bool Executor::evaluateCondition(const Condition* cond, const Table& table, size
                     return false;
             return true;
         }
-
         case ConditionType::LOGICAL_OR: {
             auto logic = static_cast<const LogicalCondition*>(cond);
             for (const auto& op : logic->operands)
@@ -74,33 +71,65 @@ bool Executor::evaluateCondition(const Condition* cond, const Table& table, size
                     return true;
             return false;
         }
-
         case ConditionType::NOT: {
             auto notc = static_cast<const NotCondition*>(cond);
             return !evaluateCondition(notc->operand.get(), table, row_idx);
         }
-
         default:
             return true;
     }
 }
 
-// ==================== Конкретные выполнения ====================
+// ==================== Проверка наличия выбранной БД ====================
+static void ensureDatabaseSelected(const std::string& current_db) {
+    if (current_db.empty()) {
+        throw std::runtime_error("No database selected. Please use USE <database> or CREATE DATABASE first (it auto-selects).");
+    }
+}
 
+// ==================== CREATE DATABASE (автоматически переключает) ====================
+QueryResult Executor::executeCreateDatabase(const CreateDatabaseQuery& q) {
+    catalog_->createDatabase(q.database_name);
+    current_db_ = q.database_name;   // автоматически переключаемся на созданную БД
+    return QueryResult::makeAffected(0);
+}
+
+// ==================== DROP DATABASE ====================
+QueryResult Executor::executeDropDatabase(const DropDatabaseQuery& q) {
+    catalog_->dropDatabase(q.database_name);
+    if (current_db_ == q.database_name) {
+        current_db_.clear();   // если удалили текущую БД – сбрасываем выбор
+    }
+    return QueryResult::makeAffected(0);
+}
+
+// ==================== CREATE TABLE ====================
+QueryResult Executor::executeCreateTable(const CreateTableQuery& q) {
+    ensureDatabaseSelected(current_db_);
+    catalog_->createTable(current_db_, q.table_name, q.column_names, q.column_types);
+    return QueryResult::makeAffected(0);
+}
+
+// ==================== DROP TABLE ====================
+QueryResult Executor::executeDropTable(const DropTableQuery& q) {
+    ensureDatabaseSelected(current_db_);
+    catalog_->dropTable(current_db_, q.table_name);
+    return QueryResult::makeAffected(0);
+}
+
+// ==================== SELECT ====================
 QueryResult Executor::executeSelect(const SelectQuery& q) {
+    ensureDatabaseSelected(current_db_);
     Table& table = catalog_->getTable(current_db_, q.table_name);
 
-    // Фильтрация строк по условию WHERE
     std::vector<size_t> row_indices;
     for (size_t i = 0; i < table.rowCount(); ++i) {
         if (evaluateCondition(q.where.get(), table, i))
             row_indices.push_back(i);
     }
 
-    // Определение колонок для проекции
     std::vector<size_t> col_indices;
     if (q.columns.empty()) {
-        // SELECT * -> все колонки
         for (size_t i = 0; i < table.columnNames().size(); ++i)
             col_indices.push_back(i);
     } else {
@@ -118,7 +147,6 @@ QueryResult Executor::executeSelect(const SelectQuery& q) {
         }
     }
 
-    // Формирование результата
     std::vector<std::string> result_col_names;
     for (size_t idx : col_indices)
         result_col_names.push_back(table.columnNames()[idx]);
@@ -134,10 +162,11 @@ QueryResult Executor::executeSelect(const SelectQuery& q) {
     return QueryResult::makeSelect(result_col_names, result_rows);
 }
 
+// ==================== INSERT ====================
 QueryResult Executor::executeInsert(const InsertQuery& q) {
+    ensureDatabaseSelected(current_db_);
     Table& table = catalog_->getTable(current_db_, q.table_name);
 
-    // Определить соответствие колонок (если список колонок не указан – все колонки по порядку)
     std::vector<size_t> target_col_indices;
     if (q.columns.empty()) {
         for (size_t i = 0; i < table.columnNames().size(); ++i)
@@ -173,17 +202,17 @@ QueryResult Executor::executeInsert(const InsertQuery& q) {
     return QueryResult::makeAffected(affected);
 }
 
+// ==================== UPDATE ====================
 QueryResult Executor::executeUpdate(const UpdateQuery& q) {
+    ensureDatabaseSelected(current_db_);
     Table& table = catalog_->getTable(current_db_, q.table_name);
 
-    // Найти строки, подходящие под WHERE
     std::vector<size_t> row_indices;
     for (size_t i = 0; i < table.rowCount(); ++i) {
         if (evaluateCondition(q.where.get(), table, i))
             row_indices.push_back(i);
     }
 
-    // Преобразовать присваивания (имя колонки -> индекс)
     std::unordered_map<size_t, Value> updates_by_index;
     for (const auto& [col_name, new_val] : q.assignments) {
         size_t col_idx = 0;
@@ -194,7 +223,6 @@ QueryResult Executor::executeUpdate(const UpdateQuery& q) {
         updates_by_index[col_idx] = new_val;
     }
 
-    // Применить обновления
     for (size_t row_idx : row_indices) {
         for (const auto& [col_idx, new_val] : updates_by_index) {
             table.updateRow(row_idx, {{table.columnNames()[col_idx], new_val}});
@@ -204,7 +232,9 @@ QueryResult Executor::executeUpdate(const UpdateQuery& q) {
     return QueryResult::makeAffected(row_indices.size());
 }
 
+// ==================== DELETE ====================
 QueryResult Executor::executeDelete(const DeleteQuery& q) {
+    ensureDatabaseSelected(current_db_);
     Table& table = catalog_->getTable(current_db_, q.table_name);
 
     std::vector<size_t> row_indices;
@@ -213,29 +243,8 @@ QueryResult Executor::executeDelete(const DeleteQuery& q) {
             row_indices.push_back(i);
     }
 
-    // Удаляем с конца, чтобы не смещать индексы
     for (auto it = row_indices.rbegin(); it != row_indices.rend(); ++it)
         table.deleteRow(*it);
 
     return QueryResult::makeAffected(row_indices.size());
-}
-
-QueryResult Executor::executeCreateDatabase(const CreateDatabaseQuery& q) {
-    catalog_->createDatabase(q.database_name);
-    return QueryResult::makeAffected(0);
-}
-
-QueryResult Executor::executeDropDatabase(const DropDatabaseQuery& q) {
-    catalog_->dropDatabase(q.database_name);
-    return QueryResult::makeAffected(0);
-}
-
-QueryResult Executor::executeCreateTable(const CreateTableQuery& q) {
-    catalog_->createTable(current_db_, q.table_name, q.column_names, q.column_types);
-    return QueryResult::makeAffected(0);
-}
-
-QueryResult Executor::executeDropTable(const DropTableQuery& q) {
-    catalog_->dropTable(current_db_, q.table_name);
-    return QueryResult::makeAffected(0);
 }

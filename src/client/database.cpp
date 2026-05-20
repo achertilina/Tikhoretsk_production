@@ -23,7 +23,6 @@ bool Database::open(const std::string& root_path) {
         pImpl->catalog->loadAll();
         pImpl->executor = std::make_unique<Executor>(pImpl->catalog.get());
 
-        // Если уже есть хотя бы одна база, делаем её текущей
         auto dbs = pImpl->catalog->listDatabases();
         if (!dbs.empty()) {
             pImpl->current_db = dbs[0];
@@ -67,9 +66,11 @@ ClientResult Database::execute(const std::string& sql) {
         if (!pImpl->executor) {
             pImpl->executor = std::make_unique<Executor>(pImpl->catalog.get());
         }
-        // Важно: перед выполнением обновляем текущую БД в executor
         pImpl->executor->setCurrentDatabase(pImpl->current_db);
         auto internalResult = pImpl->executor->execute(*stmt);
+        
+        pImpl->current_db = pImpl->executor->getCurrentDatabase();
+        
         return ClientResult(internalResult);
     } catch (const std::exception& e) {
         return ClientResult::makeError(e.what());

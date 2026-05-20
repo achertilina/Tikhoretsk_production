@@ -9,6 +9,7 @@ public:
     explicit Executor(Catalog* catalog);
 
     void setCurrentDatabase(const std::string& db_name);
+    std::string getCurrentDatabase() const { return current_db_; }
     QueryResult execute(const Statement& stmt);
 
 private:
