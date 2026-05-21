@@ -1,0 +1,2 @@
+# No external dependencies needed - uses only standard library
+# tkinter comes with Python by default

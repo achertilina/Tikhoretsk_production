@@ -1,11 +1,12 @@
 #pragma once
 
 #include "../core/value.h"
-#include <memory>
-#include <vector>
 #include <string>
-
+#include <vector>
 #include <unordered_map>
+#include <memory>
+#include <optional>
+
 
 // Forward declarations
 struct Condition;

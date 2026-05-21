@@ -4,43 +4,52 @@ project(TikhoretskDB)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Поддержка nlohmann/json (header-only)
+# Добавляем -fPIC для всех объектов
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+
+# Поддержка nlohmann/json
 if(NOT NLOHMANN_JSON_INCLUDE_DIR)
     find_path(NLOHMANN_INCLUDE_DIR nlohmann/json.hpp)
     if(NLOHMANN_INCLUDE_DIR)
         set(NLOHMANN_JSON_INCLUDE_DIR ${NLOHMANN_INCLUDE_DIR})
     else()
-        message(FATAL_ERROR "nlohmann/json.hpp not found. Pass -DNLOHMANN_JSON_INCLUDE_DIR=/path/to/libs")
+        find_path(NLOHMANN_JSON_INCLUDE_DIR nlohmann/json.hpp 
+            PATHS /usr/include /usr/local/include
+            PATH_SUFFIXES nlohmann)
+        if(NOT NLOHMANN_JSON_INCLUDE_DIR)
+            message(FATAL_ERROR "nlohmann/json.hpp not found")
+        endif()
     endif()
 endif()
 
+message(STATUS "Using nlohmann/json from: ${NLOHMANN_JSON_INCLUDE_DIR}")
+
 # ========================
-# Статическая библиотека (ядро + API)
+# Статическая библиотека с -fPIC
 # ========================
 add_library(db_lib STATIC
-    # Core
     src/core/value.cpp
     src/core/table.cpp
     src/core/storage.cpp
     src/core/database_metadata.cpp
     src/core/catalog.cpp
-    # SQL
     src/sql/ast.cpp
     src/sql/parser.cpp
     src/sql/executor.cpp
     src/sql/result.cpp
-    # Client (API)
     src/client/database.cpp
     src/client/result.cpp
 )
 
-# Говорим, где искать заголовочные файлы
 target_include_directories(db_lib PUBLIC src)
-
 target_include_directories(db_lib PRIVATE ${NLOHMANN_JSON_INCLUDE_DIR})
 
+# Принудительно добавляем -fPIC для статической библиотеки
+set_property(TARGET db_lib PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 # ========================
-# Консольный интерфейс (твой фронтенд)
+# Консольный интерфейс
 # ========================
 add_executable(db_console
     src/console/main.cpp
@@ -50,26 +59,22 @@ target_link_libraries(db_console db_lib)
 target_include_directories(db_console PRIVATE src)
 
 # ========================
-# GUI (опционально, только если нужен)
+# Динамическая библиотека для Python
 # ========================
-option(BUILD_GUI "Build GUI version" OFF)
+add_library(db_python SHARED
+    src/client/c_api.cpp
+)
 
-if(BUILD_GUI)
-    find_package(Qt6 REQUIRED COMPONENTS Widgets)
-    
-    add_executable(db_gui
-        src/gui/main.cpp
-        src/gui/main_window.cpp
-        src/gui/query_editor.cpp
-        src/gui/results_table.cpp
-        src/gui/connection_panel.cpp
+target_link_libraries(db_python db_lib)
+target_include_directories(db_python PRIVATE src)
+
+set_target_properties(db_python PROPERTIES
+    PREFIX ""
+    SUFFIX "${CMAKE_SHARED_LIBRARY_SUFFIX}"
+)
+
+if(UNIX AND NOT APPLE)
+    set_target_properties(db_python PROPERTIES
+        LINK_FLAGS "-Wl,-rpath,."
     )
-    
-    target_link_libraries(db_gui Qt6::Widgets db_lib)
-    target_include_directories(db_gui PRIVATE src)
 endif()
-
-# ========================
-# Настройки для отладки
-# ========================
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -g")
